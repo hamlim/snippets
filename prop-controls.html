@@ -17,9 +17,12 @@
         options: 'options',
       }
 
-      function evaluateTypes(types) {
+      function evaluateTypes(types, nestedName = undefined) {
         return Object.entries(types).reduce(
-          (acc, curr) => ({ ...acc, [curr[0]]: curr[1](curr[0]) }),
+          (acc, curr) => ({
+            ...acc,
+            [curr[0]]: { ...curr[1](curr[0]), nestedName },
+          }),
           {},
         )
       }
@@ -46,7 +49,7 @@
       let shapeType = ({ label, types }) => name => ({
         propName: name,
         label,
-        types: evaluateTypes(types),
+        types: evaluateTypes(types, name),
         $type: TYPES.shape,
       })
 
@@ -86,7 +89,35 @@
         }),
       }
 
-      console.log(evaluateTypes(controls))
+      const types = evaluateTypes(controls)
+
+      console.log(types)
+
+      function processor(types, render) {
+        return Object.entries(types).map(([name, attrs]) => {
+          if (attrs.$type === TYPES.shape) {
+            return processor(attrs.types, render)
+          }
+          return render({
+            name,
+            ...attrs,
+          })
+        })
+      }
+
+      const els = []
+
+      const render = ({ propName, nestedName }) => {
+        const el = document.createElement('p')
+        el.textContent = nestedName ? `${nestedName} - ${propName}` : propName
+        els.push(el)
+      }
+
+      processor(types, render)
+
+      els.forEach(el => {
+        document.body.appendChild(el)
+      })
     </script>
   </body>
 </html>
